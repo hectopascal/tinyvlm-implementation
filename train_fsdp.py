@@ -13,8 +13,18 @@ from tinyvlm.config import load_config
 from tinyvlm.model import TinyVLM
 from tinyvlm.data import LLaVAPretrainDataset, collate
 from tinyvlm.utils import print_rank0, get_world_size, resolve_dtype
+from torch.profiler import profile, ProfilerActivity, schedule, tensorboard_trace_handler
 
 from tinyvlm.utils import resolve_dtype
+
+# profiler 
+prof_schedule = schedule(
+    skip_first=10,   # let things warm up
+    wait=2,          
+    warmup=2,        
+    active=5,        
+    repeat=1,        # do this once
+)
 
 def build_param_groups(model, projector_lr, lm_lr):
     """Different LRs for projector vs LoRA params. Required because they
@@ -28,7 +38,6 @@ def build_param_groups(model, projector_lr, lm_lr):
         elif "lora_" in name:
             lora_params.append(p)
         else:
-            # Could be embedding table from resize_token_embeddings — assign to lm_lr
             lora_params.append(p)
     return [
         {"params": projector_params, "lr": projector_lr, "name": "projector"},
@@ -36,11 +45,12 @@ def build_param_groups(model, projector_lr, lm_lr):
     ]
 
 
-def main(cfg_path):
+def main(cfg_path, label=" "):
     cfg = load_config(cfg_path)
     set_seed(cfg.train.seed)
 
     dtype = resolve_dtype(cfg.train.dtype)
+
     # Accelerator handles FSDP wrap, mixed precision, device placement.
     accelerator = Accelerator(
         gradient_accumulation_steps=cfg.train.grad_accum_steps,
@@ -49,7 +59,6 @@ def main(cfg_path):
     world_size = accelerator.num_processes
     print_rank0(f"World size: {world_size}, mixed precision: {cfg.train.dtype}")
 
-    # Build model on CPU; accelerator will shard it across GPUs during prepare()
     model = TinyVLM(cfg.model, dtype=dtype)
     img_proc = AutoImageProcessor.from_pretrained(cfg.model.vision_model)
 
@@ -69,17 +78,21 @@ def main(cfg_path):
     optimizer = AdamW(param_groups, weight_decay=cfg.train.weight_decay,
                       betas=cfg.train.betas)
 
-    # The magic call. accelerator wraps the model in FSDP, distributes the
-    # dataloader, sets up the optimizer for sharded params.
     model, optimizer, dl = accelerator.prepare(model, optimizer, dl)
 
-    # Throughput tracking
     throughput_window = deque(maxlen=50)
     step = 0
     measured_start = None
 
     model.train()
-    for batch in dl:
+    # with profile(
+    #     activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+    #     schedule=prof_schedule,
+    #     on_trace_ready=tensorboard_trace_handler("./profile_trace"),
+    #     record_shapes=False,  
+    #     with_stack=False,           
+    # ) as prof:
+    for step, batch in enumerate(dl):
         # gradient_accumulation context handles the accum boundary
         with accelerator.accumulate(model):
             t0 = time.perf_counter()
@@ -110,8 +123,8 @@ def main(cfg_path):
             avg_tps = sum(throughput_window) / len(throughput_window) if throughput_window else 0
             mem_gb = torch.cuda.max_memory_allocated() / 1e9
             print(f"step {step:4d} | loss {out.loss.item():.3f} | "
-                  f"tokens/s {avg_tps:>8.0f} | peak mem {mem_gb:.1f} GB")
-
+                f"tokens/s {avg_tps:>8.0f} | peak mem {mem_gb:.1f} GB")
+        # prof.step()
         step += 1
         if step >= cfg.train.max_steps:
             break
@@ -131,12 +144,12 @@ def main(cfg_path):
         activation_ckpt = fsdp_plugin.activation_checkpointing if fsdp_plugin else False
 
         # Append to results file for plotting
-        results_path = Path("fsdp_study/results.csv")
+        results_path = Path("fsdp_study/results1.csv")
         write_header = not results_path.exists()
         with open(results_path, "a") as f:
             if write_header:
-                f.write("world_size,per_gpu_batch,grad_accum,effective_batch,tokens_per_sec,peak_mem_gb,activation_ckpt\n")
-            f.write(f"{world_size},{cfg.train.batch_size},{cfg.train.grad_accum_steps},"
+                f.write("label,world_size,per_gpu_batch,grad_accum,effective_batch,tokens_per_sec,peak_mem_gb,activation_ckpt\n")
+            f.write(f"{label},{world_size},{cfg.train.batch_size},{cfg.train.grad_accum_steps},"
                     f"{cfg.train.batch_size * cfg.train.grad_accum_steps * world_size},"
                     f"{final_tps:.0f},{peak_mem:.2f},{activation_ckpt}\n")
 
@@ -144,5 +157,6 @@ def main(cfg_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
+    parser.add_argument("--label", default=" ")
     args = parser.parse_args()
     main(args.config)
