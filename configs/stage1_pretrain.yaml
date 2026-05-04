@@ -1,0 +1,23 @@
+# configs/stage1_pretrain.yaml
+run_name: tinyvlm_stage1
+out_dir: outputs/tinyvlm_stage1
+
+model:
+  vision_model: google/siglip2-base-patch16-224
+  lm_model: Qwen/Qwen2.5-0.5B
+  freeze_vision: true
+  freeze_lm: true          # only projector trains
+  train_projector: true
+
+data:
+  data_json: /tmp/data/llava_pretrain_50k.json
+  image_root: /tmp/data/images
+  max_samples: 50000
+
+train:
+  lr: 1.0e-3
+  batch_size: 16
+  grad_accum_steps: 2
+  max_steps: 3000
+  dtype: bf16
+  warmup_ratio: 0.03

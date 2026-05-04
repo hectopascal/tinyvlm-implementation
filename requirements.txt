@@ -1,0 +1,8 @@
+pillow==11.3.0
+torch==2.10.0
+torchao==0.16.0
+peft==0.19.1
+datasets==4.0.0
+transformers==5.0.0
+tensorboard
+accelerate

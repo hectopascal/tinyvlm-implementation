@@ -1,0 +1,12 @@
+model:
+  vision_model: google/siglip2-base-patch16-224
+  lm_model: Qwen/Qwen2.5-1.5B
+  freeze_vision: true
+  freeze_lm: false
+  lora_r: 16
+
+train:
+  dtype: fp16              # NOT bf16 on V100
+  batch_size: 4
+  warmup_steps: 50
+  max_steps: 250
