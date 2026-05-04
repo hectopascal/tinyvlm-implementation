@@ -1,3 +1,5 @@
+run_name: scale_7b_fsdp
+out_dir: outputs/scale_7b
 model:
   vision_model: google/siglip2-base-patch16-224
   lm_model: Qwen/Qwen2.5-1.5B
@@ -10,3 +12,14 @@ train:
   batch_size: 4
   warmup_steps: 50
   max_steps: 250
+  lr: 1.0e-3                  # projector
+  lm_lr: 2.0e-5               # LoRA
+  grad_accum_steps: 1         # set per-config to keep effective batch constant
+  log_every: 10
+  save_every: 99999       
+
+data:
+  data_json: /tmp/data/blip_laion_cc_sbu_558k.json
+  image_root: /tmp/data/images
+  max_samples: 10000          # plenty for a benchmark — you only run ~200 steps
+  max_seq_len: 384

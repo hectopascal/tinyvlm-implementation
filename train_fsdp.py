@@ -14,6 +14,7 @@ from tinyvlm.model import TinyVLM
 from tinyvlm.data import LLaVAPretrainDataset, collate
 from tinyvlm.utils import print_rank0, get_world_size, resolve_dtype
 
+from tinyvlm.utils import resolve_dtype
 
 def build_param_groups(model, projector_lr, lm_lr):
     """Different LRs for projector vs LoRA params. Required because they
@@ -39,6 +40,7 @@ def main(cfg_path):
     cfg = load_config(cfg_path)
     set_seed(cfg.train.seed)
 
+    dtype = resolve_dtype(cfg.train.dtype)
     # Accelerator handles FSDP wrap, mixed precision, device placement.
     accelerator = Accelerator(
         gradient_accumulation_steps=cfg.train.grad_accum_steps,
@@ -48,7 +50,7 @@ def main(cfg_path):
     print_rank0(f"World size: {world_size}, mixed precision: {cfg.train.dtype}")
 
     # Build model on CPU; accelerator will shard it across GPUs during prepare()
-    model = TinyVLM(cfg.model)
+    model = TinyVLM(cfg.model, dtype=dtype)
     img_proc = AutoImageProcessor.from_pretrained(cfg.model.vision_model)
 
     ds = LLaVAPretrainDataset(

@@ -29,8 +29,8 @@ class ModelConfig:
 
 @dataclass
 class DataConfig:
-    data_json: str = "data/llava_pretrain_subset.json"
-    image_root: str = "data/images"
+    data_json: str = "/tmp/data/llava_pretrain_subset.json"
+    image_root: str = "/tmp/data/images"
     max_seq_len: int = 2048
     image_size: int = 224
     num_workers: int = 4

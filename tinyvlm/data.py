@@ -14,8 +14,10 @@ from transformers import AutoImageProcessor
 
 class LLaVAPretrainDataset(Dataset):
     """Expects LLaVA-Pretrain JSON: list of {image, conversations: [{from, value}]}."""
-    def __init__(self, json_path, image_root, tokenizer, image_processor, max_len=2048):
+    def __init__(self, json_path, image_root, tokenizer, image_processor, max_len=2048, max_samples=None):
         self.data = json.load(open(json_path))
+        if max_samples is not None:
+            self.data = self.data[:max_samples]
         self.image_root = Path(image_root)
         self.tok = tokenizer
         self.img_proc = image_processor

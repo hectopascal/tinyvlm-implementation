@@ -20,7 +20,7 @@ class MLPProjector(nn.Module):
 
 
 class TinyVLM(nn.Module):
-    def __init__(self, cfg):
+    def __init__(self, cfg, dtype=torch.bfloat16):
         super().__init__()
         # Vision: SigLIP-2, frozen
         self.vision = AutoModel.from_pretrained(cfg.vision_model).vision_model
@@ -32,18 +32,19 @@ class TinyVLM(nn.Module):
         self.tokenizer.add_special_tokens({"additional_special_tokens": [IMAGE_TOKEN]})
         self.image_token_id = self.tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
 
-        lm = AutoModelForCausalLM.from_pretrained(cfg.lm_model, torch_dtype=torch.bfloat16)
+        lm = AutoModelForCausalLM.from_pretrained(cfg.lm_model, torch_dtype=dtype)
         lm.resize_token_embeddings(len(self.tokenizer))
         lora_cfg = LoraConfig(
             r=cfg.lora_r, lora_alpha=cfg.lora_alpha,
             target_modules=["q_proj", "v_proj"], task_type="CAUSAL_LM",
         )
         self.lm = get_peft_model(lm, lora_cfg)
-
+        
         # Projector: vision_dim -> lm_dim. Trainable.
         vision_dim = self.vision.config.hidden_size
         lm_dim = self.lm.config.hidden_size
-        self.projector = MLPProjector(vision_dim, lm_dim).to(torch.bfloat16)
+        self.projector = MLPProjector(vision_dim, lm_dim)
+        self.to(dtype)
 
     def encode_images(self, pixel_values):
         with torch.no_grad():
@@ -64,6 +65,7 @@ class TinyVLM(nn.Module):
             inputs_embeds=merged_embeds,
             attention_mask=merged_mask,
             labels=merged_labels,
+            use_cache=False,
         )
 
     def _splice(self, text_embeds, attn_mask, labels, img_embeds, input_ids):
@@ -99,7 +101,7 @@ class TinyVLM(nn.Module):
               img,
               text[img_token_idx+1:]
             ]))
-
+            # print(text_im[0].size(),label_im[0].size(),mask_im[0].size())
         return torch.stack(text_im), torch.stack(mask_im), torch.stack(label_im)
 
         # raise NotImplementedError("write this — it's where you'll learn the most")
