@@ -1,0 +1,2 @@
+world_size,per_gpu_batch,grad_accum,effective_batch,tokens_per_sec,peak_mem_gb,activation_ckpt
+8,4,1,32,2226,4.18,True

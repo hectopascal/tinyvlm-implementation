@@ -127,6 +127,9 @@ def main(cfg_path):
         print_rank0(f"Avg tokens/sec (last 50 steps): {final_tps:.0f}")
         print_rank0(f"Peak GPU memory: {peak_mem:.2f} GB")
 
+        fsdp_plugin = accelerator.state.fsdp_plugin
+        activation_ckpt = fsdp_plugin.activation_checkpointing if fsdp_plugin else False
+
         # Append to results file for plotting
         results_path = Path("fsdp_study/results.csv")
         write_header = not results_path.exists()
@@ -135,7 +138,7 @@ def main(cfg_path):
                 f.write("world_size,per_gpu_batch,grad_accum,effective_batch,tokens_per_sec,peak_mem_gb,activation_ckpt\n")
             f.write(f"{world_size},{cfg.train.batch_size},{cfg.train.grad_accum_steps},"
                     f"{cfg.train.batch_size * cfg.train.grad_accum_steps * world_size},"
-                    f"{final_tps:.0f},{peak_mem:.2f},{cfg.activation_ckpt}\n")
+                    f"{final_tps:.0f},{peak_mem:.2f},{activation_ckpt}\n")
 
 
 if __name__ == "__main__":

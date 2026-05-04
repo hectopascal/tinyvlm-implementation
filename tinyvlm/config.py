@@ -77,12 +77,11 @@ class Config:
     # Run metadata
     run_name: str = "tinyvlm_stage1"
     out_dir: str = "outputs/tinyvlm_stage1"
-    wandb_project: str = "tinyvlm"
 
     # Switches
     dev_mode: bool = False        # tiny stand-in models, CPU-friendly
     resume: bool = True           # auto-resume from latest ckpt in out_dir
-
+    activation_ckpt: bool = True 
 
 # ---- helpers ----
 

@@ -18,5 +18,5 @@ fsdp_config:
   fsdp_use_orig_params: true
   fsdp_cpu_ram_efficient_loading: true
   fsdp_sync_module_states: true
-  fsdp_activation_checkpointing: true
+  fsdp_activation_checkpointing: false
   fsdp_backward_prefetch: BACKWARD_PRE
