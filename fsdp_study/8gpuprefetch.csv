@@ -1,2 +1,5 @@
-world_size,per_gpu_batch,grad_accum,effective_batch,tokens_per_sec,peak_mem_gb,activation_ckpt
-8,4,1,32,3138,7.08,False
+label,world_size,per_gpu_batch,grad_accum,effective_batch,tokens_per_sec,peak_mem_gb,activation_ckpt
+ ,8,4,1,32,3138,7.08,False
+ ,8,4,1,32,3149,7.08,False
+ ,8,4,1,32,2934,7.08,False
+ ,8,4,1,32,3013,7.08,False

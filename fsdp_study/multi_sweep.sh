@@ -7,7 +7,7 @@ mkdir -p fsdp_study/logs
 N_REPEATS=3
 
 for run_idx in $(seq 1 $N_REPEATS); do
-  for ckpt in nockpt_config config; do
+  for ckpt in config; do
     for n in 8 4 2; do
       NAME="${n}gpu_${ckpt}"
       echo "=== Run $run_idx/$N_REPEATS: $NAME ==="
