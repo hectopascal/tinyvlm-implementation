@@ -57,7 +57,6 @@ class LLaVAPretrainDataset(Dataset):
 
 
 def collate(batch, pad_id):
-    # Pad input_ids/labels/mask to max length in batch. Stack pixel_values.
     # standard padding logic
     max_seqlen = max(len(x["input_ids"]) for x in batch)
     input_ids, labels, attention_mask = [], [], []
@@ -87,7 +86,7 @@ def collate(batch, pad_id):
         }
     # max_seq = len()
 
-    
+#### unused
 class LLaVAHFDataset(Dataset):
     """Wraps a HF cached dataset. Works whether images are embedded or paths."""
     def __init__(self, hf_repo, split, tokenizer, image_processor,
@@ -98,7 +97,7 @@ class LLaVAHFDataset(Dataset):
         self.tok = tokenizer
         self.img_proc = image_processor
         self.max_seq_len = max_seq_len
-        self.image_root = image_root  # only used if images are paths
+        self.image_root = image_root 
 
     def __len__(self):
         return len(self.ds)
@@ -108,7 +107,7 @@ class LLaVAHFDataset(Dataset):
         if image_field is None:
             return None
         if hasattr(image_field, "convert"):
-            return image_field.convert("RGB")            # PIL.Image already
+            return image_field.convert("RGB")     
         if isinstance(image_field, dict) and "bytes" in image_field:
             return Image.open(io.BytesIO(image_field["bytes"])).convert("RGB")
         if isinstance(image_field, str):

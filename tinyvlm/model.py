@@ -9,25 +9,24 @@ class MLPProjector(nn.Module):
     """Maps vision features -> LM embedding space. The 'connector' in LLaVA."""
     def __init__(self, vision_dim: int, lm_dim: int):
         super().__init__()
+        # two layer projector
         self.net = nn.Sequential(
             nn.Linear(vision_dim, lm_dim),
             nn.GELU(),
             nn.Linear(lm_dim, lm_dim),
         )
 
-    def forward(self, x):  # x: (B, N_patches, vision_dim)
+    def forward(self, x):  
+        # (B, N_patches, vision_dim)
         return self.net(x)
 
 
 class TinyVLM(nn.Module):
     def __init__(self, cfg, dtype=torch.bfloat16):
         super().__init__()
-        # Vision: SigLIP-2, frozen
         self.vision = AutoModel.from_pretrained(cfg.vision_model).vision_model
         for p in self.vision.parameters():
             p.requires_grad = False
-
-        # LM: small causal LM, LoRA-adapted
         self.tokenizer = AutoTokenizer.from_pretrained(cfg.lm_model)
         self.tokenizer.add_special_tokens({"additional_special_tokens": [IMAGE_TOKEN]})
         self.image_token_id = self.tokenizer.convert_tokens_to_ids(IMAGE_TOKEN)
@@ -38,9 +37,9 @@ class TinyVLM(nn.Module):
             r=cfg.lora_r, lora_alpha=cfg.lora_alpha,
             target_modules=["q_proj", "v_proj"], task_type="CAUSAL_LM",
         )
-        self.lm = get_peft_model(lm, lora_cfg)
+        self.lm = get_peft_model(lm, lora_cfg) # lora 
         
-        # Projector: vision_dim -> lm_dim. Trainable.
+        # Projector: vision_dim to lm_dim
         vision_dim = self.vision.config.hidden_size
         lm_dim = self.lm.config.hidden_size
         self.projector = MLPProjector(vision_dim, lm_dim)
@@ -56,8 +55,6 @@ class TinyVLM(nn.Module):
         # Get text embeddings, then splice image embeddings at <image> positions.
         text_embeds = self.lm.get_input_embeddings()(input_ids)  # (B, T, D)
         img_embeds = self.encode_images(pixel_values)            # (B, N, D)
-
-        # Build the merged sequence: replace each <image> token with N image embeddings.
         merged_embeds, merged_mask, merged_labels = self._splice(
             text_embeds, attention_mask, labels, img_embeds, input_ids
         )
@@ -69,10 +66,6 @@ class TinyVLM(nn.Module):
         )
 
     def _splice(self, text_embeds, attn_mask, labels, img_embeds, input_ids):
-        # Left as an exercise — but the gist: for each row, find the <image> position,
-        # split text_embeds around it, concat [pre, img_embeds, post]. 
-        # Same for mask and labels (use -100 for image positions so loss is text-only).
-        # See LLaVA's prepare_inputs_labels_for_multimodal for the canonical impl.
         # print(text_embeds.size(), attn_mask.size(), labels.size(), img_embeds.size(), input_ids.size())
         # text embed = B, seqlen, 896
         # mask = B, seqlen
@@ -103,5 +96,3 @@ class TinyVLM(nn.Module):
             ]))
             # print(text_im[0].size(),label_im[0].size(),mask_im[0].size())
         return torch.stack(text_im), torch.stack(mask_im), torch.stack(label_im)
-
-        # raise NotImplementedError("write this — it's where you'll learn the most")

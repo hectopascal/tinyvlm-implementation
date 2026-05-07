@@ -18,12 +18,9 @@ class ModelConfig:
     lora_target_modules: tuple = ("q_proj", "v_proj")
 
     # Projector
-    projector_type: str = "mlp2x_gelu"  # leave room for resampler/qformer later
-
-    # What to freeze. Stage 1: freeze vision + LM, train projector only.
-    # Stage 2: freeze vision, train projector + LoRA on LM.
+    projector_type: str = "mlp2x_gelu" 
     freeze_vision: bool = True
-    freeze_lm: bool = True       # True for stage 1, False (LoRA-trainable) for stage 2
+    freeze_lm: bool = True       
     train_projector: bool = True
 
 
@@ -42,7 +39,7 @@ class DataConfig:
 @dataclass
 class TrainConfig:
     # Optimizer
-    lr: float = 1e-3              # projector-only stage 1 likes high LR
+    lr: float = 1e-3   # for projector only training          
     lm_lr: float = 2e-5           # used in stage 2 when LM is unfrozen
     weight_decay: float = 0.0
     betas: tuple = (0.9, 0.95)
@@ -79,7 +76,7 @@ class Config:
     out_dir: str = "outputs/tinyvlm_stage1"
 
     # Switches
-    dev_mode: bool = False        # tiny stand-in models, CPU-friendly
+    dev_mode: bool = False        # apply dev override, use tiny models
     resume: bool = True           # auto-resume from latest ckpt in out_dir
     activation_ckpt: bool = True 
 

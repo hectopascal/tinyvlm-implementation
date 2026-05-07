@@ -12,6 +12,8 @@ import torch
 
 import torch.distributed as dist
 
+
+## misc 
 def is_main_process() -> bool:
     return not dist.is_initialized() or dist.get_rank() == 0
 
@@ -23,8 +25,6 @@ def print_rank0(*args, **kwargs):
         print(*args, **kwargs)
 
 
-# ---- reproducibility ----
-
 def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
@@ -32,8 +32,6 @@ def set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
     # Don't enable deterministic algorithms — too slow for training.
 
-
-# ---- precision ----
 
 def resolve_dtype(dtype_str: str) -> torch.dtype:
     """Resolve config string to torch dtype, auto-downgrading bf16 on pre-Ampere."""
@@ -51,7 +49,7 @@ def resolve_dtype(dtype_str: str) -> torch.dtype:
     raise ValueError(f"Unknown dtype: {dtype_str}")
 
 
-# ---- checkpointing ----
+# save/load
 
 def save_ckpt(model, optimizer, scheduler, step: int, cfg, out_dir: str) -> Path:
     """Save trainable params only — frozen vision tower is huge and pointless to save."""
@@ -59,12 +57,11 @@ def save_ckpt(model, optimizer, scheduler, step: int, cfg, out_dir: str) -> Path
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"step_{step:07d}.pt"
 
-    # Only save what's trainable. Vision tower weights are on HF Hub already.
     trainable_state = {
         k: v.cpu() for k, v in model.state_dict().items()
         if any(p.requires_grad for n, p in model.named_parameters() if n == k)
     }
-    # Cleaner alternative — save by name match:
+
     trainable_state = {
         k: v.cpu() for k, v in model.state_dict().items()
         if k.startswith("projector.") or "lora_" in k
@@ -106,9 +103,6 @@ def _prune_old_ckpts(out_dir: Path, keep_last_n: int) -> None:
     for old in ckpts[:-keep_last_n]:
         old.unlink()
 
-
-# ---- introspection ----
-
 def count_params(model) -> tuple[int, int]:
     """Returns (trainable, total) param counts."""
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -127,8 +121,6 @@ def print_trainable_params(model) -> None:
     print(f"[utils] {trainable:,} trainable / {total:,} total ({100*trainable/total:.2f}%)")
 
 
-# ---- learning rate ----
-
 def get_lr_schedule(optimizer, warmup_steps: int, max_steps: int):
     """Linear warmup then cosine decay to 10% of peak LR."""
     from torch.optim.lr_scheduler import LambdaLR
@@ -141,8 +133,11 @@ def get_lr_schedule(optimizer, warmup_steps: int, max_steps: int):
         return 0.1 + 0.9 * 0.5 * (1 + math.cos(math.pi * progress))
 
     return LambdaLR(optimizer, lr_lambda)
-    
-class TBLogger:
+
+
+## logging
+
+class TBLogger: # tensorboard logging
     def __init__(self, log_dir: str):
         self.writer = SummaryWriter(log_dir)
         self.start = time.time()
@@ -150,7 +145,6 @@ class TBLogger:
     def log(self, step: int, **metrics):
         for k, v in metrics.items():
             self.writer.add_scalar(k, v, step)
-        # Print too — useful when TB isn't open
         msg = " ".join(f"{k}={v:.4f}" if isinstance(v, float) else f"{k}={v}"
                        for k, v in metrics.items())
         print(f"step {step:>6d} | {msg}")
@@ -174,7 +168,6 @@ class JSONLLogger:
         record = {"step": step, "elapsed": time.time() - self.start, **metrics}
         self.f.write(json.dumps(record) + "\n")
         self.f.flush()
-        # Also print so you see it in Colab output
         msg = " ".join(f"{k}={v:.4f}" if isinstance(v, float) else f"{k}={v}"
                        for k, v in metrics.items())
         print(f"step {step:>6d} | {msg}")
