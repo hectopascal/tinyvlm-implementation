@@ -42,7 +42,7 @@ Stage 1 produces short, on-topic but generic captions consistent with limited tr
 
 
 Findings: 
-- Key insight: VLMs don't need new architecture. The LM treats image embeddings as just more tokens. Splice is the runtime operation that replaces the `<image>` bookmark token in the text sequence with N image patch embeddings, so the LM sees one continuous sequence with image content where the bookmark was. The projector just learns to produce vectors that look like token embeddings.
+- VLMs don't need new architecture, the LM treats image embeddings as just more tokens. Splice is the runtime operation that replaces the `<image>` bookmark token in the text sequence with N image patch embeddings, so the LM sees one continuous sequence with image content where the bookmark was. The projector just learns to produce vectors that look like token embeddings.
 - Projector trains at more aggressive/larger LR than the LM due to the different param counts and different init.
 - Stage 1 trains the projector to produce LM-compatible embeddings before stage 2 unfreezes the LM, and skipping stage 1 means stage 2 wastes its budget re-learning alignment.
 
