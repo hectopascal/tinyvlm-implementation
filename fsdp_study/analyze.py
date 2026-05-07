@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-CSV_PATH = "/home/ubuntu/tinyvlm-implemention/fsdp_study/results1.csv"
+CSV_PATH = "fsdp_study/results1.csv"
 PLOT_PATH = "plots/scaling.png"
 
 # ---------- load and clean ----------
@@ -135,5 +135,5 @@ print(f"Saved plot to {PLOT_PATH}")
 
 # ---------- save aggregated CSV ----------
 
-agg.to_csv("/home/ubuntu/tinyvlm-implemention/fsdp_study/results_aggregated.csv", index=False)
+agg.to_csv("fsdp_study/results_aggregated.csv", index=False)
 print("Saved aggregated results to fsdp_study/results_aggregated.csv")
