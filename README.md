@@ -1,4 +1,7 @@
 # Multimodal VLM: Implementation + FSDP Scaling Study
+
+[Companion post: A VLM, FSDP, and the Lie My Strong-Scaling Numbers Told Me](https://hectopascal.github.io/blog/2026/vlm-fsdp-strong-scaling/)
+
 **Stack:** PyTorch · HuggingFace transformers · PEFT (LoRA) · accelerate · FSDP · torch.profiler · 8×V100
 
 **Part 1**: Built a tiny VLM from scratch — SigLIP-2-base vision encoder
