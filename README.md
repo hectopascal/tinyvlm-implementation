@@ -16,6 +16,10 @@ FSDP scaling study on it.
 - Profiler-driven attempt at `fsdp_forward_prefetch` achieved trace-level 
   comms overlap but didn't move throughput (likely V100 NVLink contention)
 
+
+<img src="plots/cat.png" alt="drawing" width="400"/>
+<img src="plots/plane.png" alt="drawing" width="400"/>
+
 ![scaling](plots/scaling.png)
 
 ## Repo structure
